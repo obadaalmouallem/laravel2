@@ -17,6 +17,8 @@ class Product extends Model
         'user_id',
         'Price',
         'Quantity',
+        'color',
+        'gender',
     ];
 
     public function categorie()
@@ -47,5 +49,10 @@ class Product extends Model
     public function comment()
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function sizes()
+    {
+        return $this->belongsToMany(Size::class);
     }
 }

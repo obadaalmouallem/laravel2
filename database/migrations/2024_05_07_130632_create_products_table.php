@@ -19,8 +19,7 @@ return new class extends Migration
             $table->longText('Description');
             $table->double('Price');
             $table->integer('Quantity');
-            $table->enum('size', ['small', 'medium', 'large', 'xlarge']);
-
+            // $table->enum('size', ['small', 'medium', 'large', 'xlarge']);
 
             $table->timestamps();
         });

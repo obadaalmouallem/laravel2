@@ -26,6 +26,8 @@ class User extends Authenticatable
         'is_admin',
         'color',
         'gender',
+        'phone_number',
+        'confirm_password'
     ];
 
     /**

@@ -2,104 +2,100 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
-use App\Models\Product;
+use App\Models\Image;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
-class OrdersController extends Controller
+class ImagesController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('products')->get();
+        $images = Image::all();
 
-        return response()->json($orders, 200);
-    }
-
-    public function show($id)
-    {
-        $order = Order::with('products')->find($id);
-
-        if (! $order) {
-            return response()->json(['error' => 'Order not found'], 404);
-        }
-
-        return response()->json($order, 200);
+        return response()->json($images);
     }
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'products.*.id' => 'required|exists:products,id',
-            'products.*.quantity' => 'required|integer|min:1',
+            'product_id' => 'nullable|exists:products,id',
+            'file_name' => 'required|string|max:255',
+            'file_path' => 'required|file|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
 
-        $order = Order::create();
+        if ($request->hasFile('file_path')) {
+            // Get the uploaded file
+            $file = $request->file('file_path');
 
-        foreach ($request->input('products') as $productData) {
-            $product = Product::find($productData['id']);
+            // Generate a unique file name
+            $fileName = time().'_'.$file->getClientOriginalName();
 
-            if (! $product) {
-                $order->delete(); // Rollback if product not found
+            // Move the file to the desired location (e.g., storage/app/public/images)
+            $filePath = $file->storeAs('images', $fileName, 'public');
 
-                return response()->json(['error' => 'Product not found'], 404);
-            }
+            // Save the image information in the database
+            $image = Image::create([
+                'product_id' => $request->input('product_id'),
+                'file_name' => $fileName,
+                'file_path' => '/storage/'.$filePath,
+            ]);
 
-            // Attach product to order with quantity
-            $order->products()->attach($product->id, ['quantity' => $productData['quantity']]);
+            return response()->json($image, 201);
+        } else {
+            return response()->json(['file' => 'No file uploaded'], 400);
         }
-
-        return response()->json($order, 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Image $image)
     {
-        $order = Order::find($id);
-
-        if (! $order) {
-            return response()->json(['error' => 'Order not found'], 404);
-        }
-
         $validator = Validator::make($request->all(), [
-            'products.*.id' => 'required|exists:products,id',
-            'products.*.quantity' => 'required|integer|min:1',
+            'product_id' => 'nullable|exists:products,id',
+            'file_name' => 'required|string|max:255',
+            'file_path' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 400);
         }
 
-        // Detach all existing products from the order
-        $order->products()->detach();
+        $data = $request->only(['product_id', 'file_name']);
 
-        foreach ($request->input('products') as $productData) {
-            $product = Product::find($productData['id']);
-
-            if (! $product) {
-                return response()->json(['error' => 'Product not found'], 404);
+        if ($request->hasFile('file')) {
+            // Delete the old file from storage
+            if ($image->file_path) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $image->file_path));
             }
 
-            // Attach product to order with quantity
-            $order->products()->attach($product->id, ['quantity' => $productData['quantity']]);
+            // Get the new file
+            $file = $request->file('file');
+
+            // Generate a unique file name
+            $fileName = time().'_'.$file->getClientOriginalName();
+
+            // Move the file to the desired location (e.g., storage/app/public/images)
+            $filePath = $file->storeAs('images', $fileName, 'public');
+
+            // Update the file path in the database
+            $data['file_path'] = 'storage/'.$filePath;
+            $data['file_name'] = $fileName;
         }
 
-        return response()->json($order, 200);
+        // Update the image information in the database
+        $image->update($data);
+
+        return response()->json($image);
     }
 
     public function destroy($id)
     {
-        $order = Order::find($id);
+        $image = Image::findOrfail($id);
+        $image->delete();
 
-        if (! $order) {
-            return response()->json(['error' => 'Order not found'], 404);
-        }
-
-        $order->delete();
-
-        return response()->json(['message' => 'Order deleted successfully'], 200);
+        return response()->json('Successfully Deleted', 201);
     }
 }
