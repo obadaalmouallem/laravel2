@@ -8,9 +8,9 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OrdersController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\SizesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -40,5 +40,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::resource('like', LikeController::class);
     Route::resource('image', ImagesController::class);
     Route::resource('order', OrdersController::class);
+    Route::get('/sizes', [SizesController::class, 'index']);
 
 });
